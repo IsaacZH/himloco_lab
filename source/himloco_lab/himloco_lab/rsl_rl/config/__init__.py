@@ -28,14 +28,4 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-"""
-HimLoco RSL-RL implementation with history-informed models.
-"""
-
-# Export HIM implementations
-from .algorithms.him_ppo import *
-from .modules.him_actor_critic import *
-from .modules.him_estimator import *
-from .storage.him_rollout_storage import *
-from .runners.him_on_policy_runner import *
-from .wrappers import *
+from .rl_cfg import *

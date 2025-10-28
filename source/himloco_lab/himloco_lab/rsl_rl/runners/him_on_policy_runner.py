@@ -36,10 +36,9 @@ import statistics
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
-from rsl_rl.algorithms import PPO, HIMPPO
-from rsl_rl.modules import HIMActorCritic
-from rsl_rl.env import VecEnv
-
+from ..algorithms import HIMPPO
+from ..modules import HIMActorCritic
+from ..env import VecEnv
 
 class HIMOnPolicyRunner:
 
@@ -61,8 +60,8 @@ class HIMOnPolicyRunner:
         self.num_actor_obs = self.env.num_obs
         self.num_critic_obs = num_critic_obs
         actor_critic_class = eval(self.cfg["policy_class_name"]) # HIMActorCritic
-        actor_critic: HIMActorCritic = actor_critic_class( self.env.num_obs,
-                                                        num_critic_obs,
+        actor_critic: HIMActorCritic = actor_critic_class( self.env.num_obs, # historical obs
+                                                        num_critic_obs, # historical privileged obs
                                                         self.env.num_one_step_obs,
                                                         self.env.num_actions,
                                                         **self.policy_cfg).to(self.device)
@@ -81,7 +80,7 @@ class HIMOnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        _, _ = self.env.reset()
+        # _, _ = self.env.reset() we call this in wrapper
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
