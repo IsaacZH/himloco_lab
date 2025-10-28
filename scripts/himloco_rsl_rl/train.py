@@ -53,6 +53,7 @@ from isaaclab.utils.io import dump_pickle, dump_yaml
 
 import himloco_lab.tasks  # noqa: F401
 from himloco_lab.rsl_rl import HIMOnPolicyRunner, HimlocoVecEnvWrapper
+from himloco_lab.rsl_rl.config import HIMOnPolicyRunnerCfg
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -62,7 +63,7 @@ torch.backends.cudnn.benchmark = False
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
-def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg):
+def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: HIMOnPolicyRunnerCfg):
     """Train with HimLoco RSL-RL agent."""
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_himloco_rsl_rl_cfg(agent_cfg, args_cli)

@@ -163,3 +163,9 @@ class HIMOnPolicyRunnerCfg(HIMBaseRunnerCfg):
 
     algorithm: HIMPPPOAlgorithmCfg = MISSING
     """The algorithm configuration."""
+    
+    history_length: int = 0
+    """Number of historical time steps to stack with current observation (0 means current only). Default is 0."""
+    
+    privileged_history_length: int = 0
+    """Number of historical time steps to stack with current privileged observation. Default is 0."""

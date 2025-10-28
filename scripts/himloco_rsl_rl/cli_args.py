@@ -10,7 +10,7 @@ import random
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from himloco_lab.rsl_rl.runners import HimlocoRunnerConfig
+    from himloco_lab.rsl_rl.config import HIMOnPolicyRunnerCfg
 
 
 def add_himloco_rsl_rl_args(parser: argparse.ArgumentParser):
@@ -36,19 +36,6 @@ def add_himloco_rsl_rl_args(parser: argparse.ArgumentParser):
     )
     arg_group.add_argument(
         "--log_project_name", type=str, default=None, help="Name of the logging project when using wandb or neptune."
-    )
-    # -- history arguments (specific to HimLoco)
-    arg_group.add_argument(
-        "--history_length",
-        type=int,
-        default=None,
-        help="Number of historical time steps to stack with current observation (0 means current only).",
-    )
-    arg_group.add_argument(
-        "--privileged_history_length",
-        type=int,
-        default=None,
-        help="Number of historical time steps to stack with current privileged observation.",
     )
 
 
@@ -103,10 +90,5 @@ def update_himloco_rsl_rl_cfg(agent_cfg, args_cli: argparse.Namespace):
         if agent_cfg.logger in {"wandb", "neptune"}:
             agent_cfg.wandb_project = args_cli.log_project_name
             agent_cfg.neptune_project = args_cli.log_project_name
-    # HimLoco specific: history lengths
-    if hasattr(args_cli, "history_length") and args_cli.history_length is not None:
-        agent_cfg.history_length = args_cli.history_length
-    if hasattr(args_cli, "privileged_history_length") and args_cli.privileged_history_length is not None:
-        agent_cfg.privileged_history_length = args_cli.privileged_history_length
 
     return agent_cfg
