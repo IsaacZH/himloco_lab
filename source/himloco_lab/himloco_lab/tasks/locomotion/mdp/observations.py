@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
 def base_external_force(
     env: ManagerBasedRLEnv,
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot", body_names="base")
+    asset_cfg: SceneEntityCfg,
 ) -> torch.Tensor:
     """observe external force applied on the base"""
     asset: Articulation = env.scene[asset_cfg.name]
     # shape: (num_envs, 3)
-    return asset._external_force_b[:, asset_cfg.body_ids, :].clone()
+    return asset._external_force_b[:, asset_cfg.body_ids, :].squeeze(1).clone()

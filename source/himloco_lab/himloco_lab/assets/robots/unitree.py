@@ -15,7 +15,7 @@ from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 
-from unitree_rl_lab.assets.robots import unitree_actuators
+from himloco_lab.assets.robots import unitree_actuators
 
 
 @configclass
