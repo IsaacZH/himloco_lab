@@ -11,7 +11,6 @@ import gymnasium as gym
 import torch
 
 from isaaclab.envs import ManagerBasedRLEnv
-from tensordict import TensorDict
 from ..env.vec_env import VecEnv
 
 class HimlocoVecEnvWrapper(VecEnv):
@@ -195,12 +194,11 @@ class HimlocoVecEnvWrapper(VecEnv):
         """Reset the environment.
         
         Returns:
-            obs
-            extras
+            obs policy
         """
         # reset the environment
-        obs_dict, extras = self.env.reset()
-        return TensorDict(obs_dict, batch_size=[self.num_envs]), extras
+        obs_dict, _ = self.env.reset()
+        return obs_dict["policy"], {"observations": obs_dict}
 
     def get_observations(self) -> torch.Tensor:
         """Get current policy observations.

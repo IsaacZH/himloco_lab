@@ -157,6 +157,12 @@ class HIMOnPolicyRunnerCfg(HIMBaseRunnerCfg):
 
     class_name: str = "HIMOnPolicyRunner"
     """The runner class name. Default is OnPolicyRunner."""
+    
+    policy_class_name: str = "HIMActorCritic"
+    """The policy class name. Default is HIMActorCritic."""
+    
+    algorithm_class_name: str = "HIMPPO"
+    """The algorithm class name. Default is HIMPPO."""
 
     policy: HIMPPOActorCriticCfg = MISSING
     """The policy configuration."""

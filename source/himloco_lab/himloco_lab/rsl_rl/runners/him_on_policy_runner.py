@@ -48,7 +48,7 @@ class HIMOnPolicyRunner:
                  log_dir=None,
                  device='cpu'):
 
-        self.cfg=train_cfg["runner"]
+        # self.cfg=train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
         self.device = device
@@ -59,16 +59,16 @@ class HIMOnPolicyRunner:
             num_critic_obs = self.env.num_obs
         self.num_actor_obs = self.env.num_obs
         self.num_critic_obs = num_critic_obs
-        actor_critic_class = eval(self.cfg["policy_class_name"]) # HIMActorCritic
+        actor_critic_class = eval(train_cfg["policy_class_name"]) # HIMActorCritic
         actor_critic: HIMActorCritic = actor_critic_class( self.env.num_obs, # historical obs
                                                         num_critic_obs, # historical privileged obs
                                                         self.env.num_one_step_obs,
                                                         self.env.num_actions,
                                                         **self.policy_cfg).to(self.device)
-        alg_class = eval(self.cfg["algorithm_class_name"]) # HIMPPO
+        alg_class = eval(train_cfg["algorithm_class_name"]) # HIMPPO
         self.alg: HIMPPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
-        self.num_steps_per_env = self.cfg["num_steps_per_env"]
-        self.save_interval = self.cfg["save_interval"]
+        self.num_steps_per_env = train_cfg["num_steps_per_env"]
+        self.save_interval = train_cfg["save_interval"]
 
         # init storage and model
         self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs], [self.env.num_privileged_obs], [self.env.num_actions])

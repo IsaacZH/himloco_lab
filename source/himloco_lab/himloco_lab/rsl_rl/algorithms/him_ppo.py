@@ -32,8 +32,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from rsl_rl.modules import HIMActorCritic
-from rsl_rl.storage import HIMRolloutStorage
+from ..modules import HIMActorCritic
+from ..storage import HIMRolloutStorage
 
 class HIMPPO:
     actor_critic: HIMActorCritic

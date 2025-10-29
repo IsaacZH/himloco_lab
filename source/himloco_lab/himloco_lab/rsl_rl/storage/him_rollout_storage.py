@@ -31,7 +31,7 @@
 import torch
 import numpy as np
 
-from rsl_rl.utils import split_and_pad_trajectories
+# from ..utils import split_and_pad_trajectories
 
 class HIMRolloutStorage:
     class Transition:
