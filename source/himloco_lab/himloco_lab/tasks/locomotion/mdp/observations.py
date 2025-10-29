@@ -5,15 +5,15 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
+    from isaaclab.managers import SceneEntityCfg
+    from isaaclab.assets import Articulation, RigidObject
 
 
-def gait_phase(env: ManagerBasedRLEnv, period: float) -> torch.Tensor:
-    if not hasattr(env, "episode_length_buf"):
-        env.episode_length_buf = torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
-
-    global_phase = (env.episode_length_buf * env.step_dt) % period / period
-
-    phase = torch.zeros(env.num_envs, 2, device=env.device)
-    phase[:, 0] = torch.sin(global_phase * torch.pi * 2.0)
-    phase[:, 1] = torch.cos(global_phase * torch.pi * 2.0)
-    return phase
+def base_external_force(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot", body_names="base")
+) -> torch.Tensor:
+    """observe external force applied on the base"""
+    asset: Articulation = env.scene[asset_cfg.name]
+    # shape: (num_envs, 3)
+    return asset._external_force_b[:, asset_cfg.body_ids, :].clone()
