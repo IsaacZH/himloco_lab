@@ -111,6 +111,9 @@ class HIMPPOActorCriticCfg:
 
     init_noise_std: float = 1.0
     """The initial noise standard deviation for the actor. Default is 1.0."""
+    
+    normalize_obs:  bool = False
+    """Whether to normalize observations. Default is False."""
 
 @configclass
 class HIMPPPOAlgorithmCfg:

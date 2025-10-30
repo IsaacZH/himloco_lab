@@ -256,7 +256,7 @@ class ObservationsCfg:
         height_scanner = ObsTerm(func=mdp.height_scan,
             scale=5.0,
             params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            clip=(-1.0, 5.0),
+            clip=(-5.0, 5.0),
         )
 
         # def __post_init__(self):
@@ -299,7 +299,7 @@ class RewardsCfg:
         func=mdp.base_height_l2, 
         weight=-1.0, 
         params={
-            "target_height": 0.3,
+            "target_height": 0.35,
             "sensor_cfg": SceneEntityCfg("height_scanner"),
         },
     )
@@ -404,7 +404,7 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 

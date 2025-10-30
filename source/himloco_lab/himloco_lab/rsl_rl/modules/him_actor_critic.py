@@ -166,7 +166,32 @@ class HIMActorCritic(nn.Module):
         with torch.no_grad():
             vel, latent = self.estimator(obs_history)
         actor_input = torch.cat((obs_history[:,:self.num_one_step_obs], vel, latent), dim=-1)
+
+        # Check for NaN/Inf in inputs
+        if torch.isnan(actor_input).any() or torch.isinf(actor_input).any():
+            print(f"[ERROR] NaN/Inf detected in actor_input before normalization!")
+            print(f"  - obs_history stats: min={obs_history.min():.4f}, max={obs_history.max():.4f}, mean={obs_history.mean():.4f}, has_nan={torch.isnan(obs_history).any()}")
+            print(f"  - vel stats: min={vel.min():.4f}, max={vel.max():.4f}, mean={vel.mean():.4f}, has_nan={torch.isnan(vel).any()}")
+            print(f"  - latent stats: min={latent.min():.4f}, max={latent.max():.4f}, mean={latent.mean():.4f}, has_nan={torch.isnan(latent).any()}")
+            raise ValueError("NaN/Inf in actor_input before normalization")
+        
         mean = self.actor(actor_input)
+        
+        # Check for NaN/Inf in actor output
+        if torch.isnan(mean).any() or torch.isinf(mean).any():
+            print(f"[ERROR] NaN/Inf in actor output (mean)!")
+            print(f"  - actor_input stats: min={actor_input.min():.4f}, max={actor_input.max():.4f}, mean={actor_input.mean():.4f}")
+            print(f"  - Batch size: {actor_input.shape[0]}")
+
+            # Check actor network weights AFTER forward (they should still be OK)
+            for name, param in self.actor.named_parameters():
+                if torch.isnan(param).any():
+                    print(f"  - NaN in actor weight: {name}")
+                if torch.isinf(param).any():
+                    print(f"  - Inf in actor weight: {name}")
+            
+            raise ValueError("NaN or Inf detected in actor network output!")
+        
         self.distribution = Normal(mean, mean*0. + self.std)
 
     def act(self, obs_history=None, **kwargs):

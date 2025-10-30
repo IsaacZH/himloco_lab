@@ -19,6 +19,7 @@ class PPORunnerCfg(HIMOnPolicyRunnerCfg):
         critic_hidden_dims = [512, 256, 128],
         init_noise_std = 1.0,
         activation = 'elu', # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+        normalize_obs = False,  # Enable observation normalization for numerical stability
     )
     algorithm = HIMPPPOAlgorithmCfg(
         value_loss_coef = 1.0,
@@ -27,7 +28,7 @@ class PPORunnerCfg(HIMOnPolicyRunnerCfg):
         entropy_coef = 0.01,
         num_learning_epochs = 5,
         num_mini_batches = 4, # mini batch size = num_envs*nsteps / nminibatches
-        learning_rate = 1.e-3, #5.e-4
+        learning_rate = 5e-4, #5.e-4
         schedule = 'adaptive', # could be adaptive, fixed
         gamma = 0.99,
         lam = 0.95,
