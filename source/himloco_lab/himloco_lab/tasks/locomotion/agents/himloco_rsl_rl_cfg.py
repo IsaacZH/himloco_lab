@@ -9,8 +9,8 @@ from himloco_lab.rsl_rl.config import HIMOnPolicyRunnerCfg, HIMPPPOAlgorithmCfg,
 
 @configclass
 class PPORunnerCfg(HIMOnPolicyRunnerCfg):
-    num_steps_per_env = 16
-    max_iterations = 500
+    num_steps_per_env = 24
+    max_iterations = 5000
     save_interval = 50
     experiment_name = "go2_rough"
     history_length = 5

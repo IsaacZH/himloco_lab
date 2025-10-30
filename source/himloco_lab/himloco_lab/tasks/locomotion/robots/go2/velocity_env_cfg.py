@@ -72,9 +72,9 @@ class RobotSceneCfg(InteractiveSceneCfg):
     # ground terrain
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",  # "plane", "generator"
-        terrain_generator=None,  # None, COBBLESTONE_ROAD_CFG
-        max_init_terrain_level=1,
+        terrain_type="generator",  # "plane", "generator"
+        terrain_generator=COBBLESTONE_ROAD_CFG,  # None, COBBLESTONE_ROAD_CFG
+        max_init_terrain_level=5,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -97,9 +97,9 @@ class RobotSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         ray_alignment="yaw",
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.7, 1.1]),
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
+        mesh_prim_paths=["/World/ground"],  
     )
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
     # lights
@@ -154,7 +154,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (0.0, 0.0)},
             "velocity_range": {
                 "x": (0.0, 0.0),
                 "y": (0.0, 0.0),
@@ -181,7 +181,7 @@ class EventCfg:
         mode="interval",
         interval_range_s=(8.0, 10.0),
         params={
-            "force_range": (-30.0, 30.0),
+            "force_range": (-20.0, 20.0),
             "torque_range": (-0.0, 0.0),
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
         },
@@ -201,7 +201,7 @@ class CommandsCfg:
             lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.5, 1.5), lin_vel_y=(-1.0, 1), ang_vel_z=(-1.5, 1.5)
+            lin_vel_x=(-1.5, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1, 1)
         ),
     )
 
@@ -224,7 +224,7 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.25, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100), noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(
             func=mdp.generated_commands, clip=(-100, 100), params={"command_name": "base_velocity"}
@@ -244,25 +244,17 @@ class ObservationsCfg:
     policy: PolicyCfg = PolicyCfg()
 
     @configclass
-    class CriticCfg(ObsGroup):
+    class CriticCfg(PolicyCfg):
         """Observations for critic group."""
 
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, clip=(-100, 100))
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100))
-        velocity_commands = ObsTerm(
-            func=mdp.generated_commands, clip=(-100, 100), params={"command_name": "base_velocity"}
-        )
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, clip=(-100, 100))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, clip=(-100, 100))
-        last_action = ObsTerm(func=mdp.last_action, clip=(-100, 100))
-        
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100))
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, scale=2.0, clip=(-100, 100))
         base_external_force = ObsTerm(
             func=mdp.base_external_force,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="base")},
             clip=(-100, 100),
         )
         height_scanner = ObsTerm(func=mdp.height_scan,
+            scale=5.0,
             params={"sensor_cfg": SceneEntityCfg("height_scanner")},
             clip=(-1.0, 5.0),
         )
@@ -307,7 +299,7 @@ class RewardsCfg:
         func=mdp.base_height_l2, 
         weight=-1.0, 
         params={
-            "target_height": 0.30,
+            "target_height": 0.3,
             "sensor_cfg": SceneEntityCfg("height_scanner"),
         },
     )
@@ -318,7 +310,7 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "target_height": -0.2,
-            # "command_name": "base_velocity"
+            "command_name": "base_velocity"
         }
     )
 
@@ -331,7 +323,7 @@ class RewardsCfg:
     #     weight=-1,
     #     params={
     #         "threshold": 0.1,
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Head_.*", ".*_hip", ".*_thigh", ".*_calf"]),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_thigh", ".*_calf"]),
     #     },
     # )
 
@@ -412,7 +404,7 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 
@@ -437,16 +429,25 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         # general settings
         self.decimation = 4
         self.episode_length_s = 20.0
-        # simulation settings
+        
+        # simulation settings 
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
-        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
+        
+        # PhysX settings
+        self.sim.physx.solver_type = 1  # TGS solver
+        self.sim.physx.max_position_iteration_count = 4
+        self.sim.physx.max_velocity_iteration_count = 0
+        self.sim.physx.bounce_threshold_velocity = 0.5
+        
+        self.sim.physx.gpu_max_rigid_patch_count = 2**23  
+        self.sim.physx.gpu_found_lost_pairs_capacity = 2**23
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
         self.scene.contact_forces.update_period = self.sim.dt
-        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        self.scene.height_scanner.update_period = self.sim.dt
 
         # check if terrain levels curriculum is enabled - if so, enable curriculum for terrain generator
         # this generates terrains with increasing difficulty and is useful for training
@@ -463,6 +464,6 @@ class RobotPlayEnvCfg(RobotEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.scene.num_envs = 32
-        self.scene.terrain.terrain_generator.num_rows = 4
-        self.scene.terrain.terrain_generator.num_cols = 4
+        # self.scene.terrain.terrain_generator.num_rows = 4
+        # self.scene.terrain.terrain_generator.num_cols = 4
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
