@@ -103,7 +103,7 @@ class HIMOnPolicyRunner:
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
-        self.logger_type = self.cfg["logger"]
+        self.logger_type = self.cfg["logger"].lower()
 
         # _, _ = self.env.reset() we call this in wrapper
     
@@ -116,10 +116,7 @@ class HIMOnPolicyRunner:
         """
         # Initialize writer (support multiple logger types like RSL-RL)
         if self.log_dir is not None and self.writer is None:
-            # Launch either Tensorboard, WandB, or Neptune summary writer(s), default: Tensorboard
-            self.logger_type = self.alg_cfg.get("logger", "tensorboard")
-            self.logger_type = self.logger_type.lower()
-
+            # Launch either Tensorboard, WandB, or Neptune summary writer(s)
             if self.logger_type == "neptune":
                 from rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
                 self.writer = NeptuneSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.alg_cfg)

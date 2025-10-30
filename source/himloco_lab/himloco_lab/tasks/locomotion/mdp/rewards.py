@@ -87,16 +87,15 @@ def feet_stumble(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Te
     forces_z = torch.abs(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2])
     forces_xy = torch.linalg.norm(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :2], dim=2)
     # Penalize feet hitting vertical surfaces
-    reward = torch.any(forces_xy > 4 * forces_z, dim=1).float()
+    reward = torch.any(forces_xy > 5 * forces_z, dim=1).float()
     return reward
 
 
 def feet_height_body(
     env: ManagerBasedRLEnv,
-    command_name: str,
     asset_cfg: SceneEntityCfg,
     target_height: float,
-    tanh_mult: float,
+    command_name: str|None = None,
 ) -> torch.Tensor:
     """Reward the swinging feet for clearing a specified height off the ground"""
     asset: RigidObject = env.scene[asset_cfg.name]
@@ -114,10 +113,10 @@ def feet_height_body(
             asset.data.root_quat_w, cur_footvel_translated[:, i, :]
         )
     foot_z_target_error = torch.square(footpos_in_body_frame[:, :, 2] - target_height).view(env.num_envs, -1)
-    foot_velocity_tanh = torch.tanh(tanh_mult * torch.norm(footvel_in_body_frame[:, :, :2], dim=2))
-    reward = torch.sum(foot_z_target_error * foot_velocity_tanh, dim=1)
-    reward *= torch.linalg.norm(env.command_manager.get_command(command_name), dim=1) > 0.1
-    reward *= torch.clamp(-env.scene["robot"].data.projected_gravity_b[:, 2], 0, 0.7) / 0.7
+    foot_leteral_vel = torch.sqrt(torch.sum(torch.square(footvel_in_body_frame[:, :, :2]), dim=2)).view(env.num_envs, -1)
+    reward = torch.sum(foot_z_target_error * foot_leteral_vel, dim=1)
+    if command_name is not None:
+        reward *= torch.linalg.norm(env.command_manager.get_command(command_name), dim=1) > 0.1
     return reward
 
 
