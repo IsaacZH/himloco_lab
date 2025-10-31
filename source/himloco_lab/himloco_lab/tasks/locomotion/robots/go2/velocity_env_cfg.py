@@ -33,27 +33,27 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     use_cache=False,
     sub_terrains={
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.1, noise_range=(0.01, 0.06), noise_step=0.01, border_width=0.1
+            proportion=0.1, noise_range=(0.01, 0.1), noise_step=0.01, border_width=0.1
         ),
         "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.1
+            proportion=0.15, slope_range=(0.0, 1.0), platform_width=2.0, border_width=0.1
         ),
         "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.15, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.1
+            proportion=0.15, slope_range=(0.0, 1.0), platform_width=2.0, border_width=0.1
         ),
-        "pyramid_stairs": terrain_gen.HfPyramidStairsTerrainCfg(
+        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
             proportion=0.3,
-            step_height_range=(0.05, 0.5),
+            step_height_range=(0.05, 0.3),
             step_width=0.3,
-            platform_width=3.0,
-            border_width=0.25,
+            platform_width=2.0,
+            border_width=0.2,
         ),
-        "pyramid_stairs_inv": terrain_gen.HfInvertedPyramidStairsTerrainCfg(
+        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
             proportion=0.3,
-            step_height_range=(0.05, 0.5),
+            step_height_range=(0.05, 0.3),
             step_width=0.3,
-            platform_width=3.0,
-            border_width=0.25,
+            platform_width=2.0,
+            border_width=0.2,
         ),
     },
 )
@@ -456,4 +456,8 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.scene.num_envs = 32
         # self.scene.terrain.terrain_generator.num_rows = 4
         # self.scene.terrain.terrain_generator.num_cols = 4
-        self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+        self.scene.terrain.terrain_generator.curriculum = True
+        self.commands.base_velocity.heading_command = False
+        self.commands.base_velocity.ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(1, 1), lin_vel_y=(0, 0), ang_vel_z=(-0, 0), heading=(-0, 0)
+        )
