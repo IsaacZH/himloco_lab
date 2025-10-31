@@ -9,8 +9,8 @@ from himloco_lab.rsl_rl.config import HIMOnPolicyRunnerCfg, HIMPPPOAlgorithmCfg,
 
 @configclass
 class PPORunnerCfg(HIMOnPolicyRunnerCfg):
-    num_steps_per_env = 24
-    max_iterations = 5000
+    num_steps_per_env = 100
+    max_iterations = 15000
     save_interval = 50
     experiment_name = "go2_rough"
     history_length = 5
@@ -28,7 +28,7 @@ class PPORunnerCfg(HIMOnPolicyRunnerCfg):
         entropy_coef = 0.01,
         num_learning_epochs = 5,
         num_mini_batches = 4, # mini batch size = num_envs*nsteps / nminibatches
-        learning_rate = 5e-4, #5.e-4
+        learning_rate = 1e-3, #5.e-4
         schedule = 'adaptive', # could be adaptive, fixed
         gamma = 0.99,
         lam = 0.95,
