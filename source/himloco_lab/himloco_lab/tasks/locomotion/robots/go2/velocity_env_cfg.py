@@ -32,34 +32,28 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     difficulty_range=(0.0, 1.0),
     use_cache=False,
     sub_terrains={
-        "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.1),
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.1, noise_range=(0.01, 0.06), noise_step=0.01, border_width=0.25
+            proportion=0.1, noise_range=(0.01, 0.06), noise_step=0.01, border_width=0.1
         ),
         "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.1
         ),
         "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            proportion=0.15, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.1
         ),
-        "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0
-        ),
-        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.2,
+        "pyramid_stairs": terrain_gen.HfPyramidStairsTerrainCfg(
+            proportion=0.3,
             step_height_range=(0.05, 0.5),
             step_width=0.3,
             platform_width=3.0,
-            border_width=1.0,
-            holes=False,
+            border_width=0.25,
         ),
-        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.2,
+        "pyramid_stairs_inv": terrain_gen.HfInvertedPyramidStairsTerrainCfg(
+            proportion=0.3,
             step_height_range=(0.05, 0.5),
             step_width=0.3,
             platform_width=3.0,
-            border_width=1.0,
-            holes=False,
+            border_width=0.25,
         ),
     },
 )
@@ -140,15 +134,6 @@ class EventCfg:
     )
 
     # reset
-    base_external_force_torque = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "force_range": (0.0, 0.0),
-            "torque_range": (-0.0, 0.0),
-        },
-    )
 
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -170,8 +155,8 @@ class EventCfg:
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
-            "position_range": (1.0, 1.0),
-            "velocity_range": (-1.0, 1.0),
+            "position_range": (0.5, 1.0),
+            "velocity_range": (0, 0),
         },
     )
 
@@ -179,12 +164,18 @@ class EventCfg:
     external_force = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="interval",
-        interval_range_s=(8.0, 10.0),
+        interval_range_s=(8.0, 8.0),
         params={
             "force_range": (-20.0, 20.0),
             "torque_range": (-0.0, 0.0),
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
         },
+    )
+    push_robot = EventTerm(
+        func=mdp.push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(16.0, 16.0),
+        params={"velocity_range": {"x": (-1, 1), "y": (-1, 1)}},
     )
 
 
@@ -197,11 +188,12 @@ class CommandsCfg:
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.1,
         debug_vis=True,
+        heading_command=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
+            lin_vel_x=(-1, 1), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-math.pi, math.pi), heading=(-math.pi, math.pi)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.5, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1, 1)
+            lin_vel_x=(-2, 2), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-math.pi, math.pi), heading=(-math.pi, math.pi)
         ),
     )
 
@@ -299,7 +291,7 @@ class RewardsCfg:
         func=mdp.base_height_l2, 
         weight=-1.0, 
         params={
-            "target_height": 0.35,
+            "target_height": 0.3,
             "sensor_cfg": SceneEntityCfg("height_scanner"),
         },
     )
@@ -310,7 +302,6 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "target_height": -0.2,
-            "command_name": "base_velocity"
         }
     )
 
@@ -397,14 +388,13 @@ class TerminationsCfg:
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
     )
-    bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
 
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 
