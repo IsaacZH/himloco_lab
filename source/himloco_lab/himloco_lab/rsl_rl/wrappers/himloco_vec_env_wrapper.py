@@ -216,12 +216,12 @@ class HimlocoVecEnvWrapper(VecEnv):
         """
         return self.privileged_obs_history_buf
 
-    def compute_termination_observations(self, env_ids: torch.Tensor, current_privileged_obs: torch.Tensor) -> torch.Tensor | None:
+    def compute_termination_observations(self, env_ids: torch.Tensor, last_privileged_obs: torch.Tensor) -> torch.Tensor | None:
         """This method extracts the privileged observations for environments that just terminated.
         
         Args:
             env_ids: Indices of environments that terminated.
-            current_privileged_obs: Current single-step privileged observations from environment.
+            last_privileged_obs: Last single-step privileged observations from environment.
         
         Returns:
             Privileged observations for terminated environments.
@@ -230,7 +230,7 @@ class HimlocoVecEnvWrapper(VecEnv):
         if len(env_ids) == 0:
             return torch.zeros(0, self.num_one_step_privileged_obs, device=self.device)
         
-        termination_obs = current_privileged_obs[env_ids]
+        termination_obs = last_privileged_obs[env_ids]
         
         return termination_obs
 
@@ -256,7 +256,9 @@ class HimlocoVecEnvWrapper(VecEnv):
             termination_ids: Indices of environments that terminated this step
             termination_privileged_obs: Privileged obs for terminated environments
         """
-        # execute step in Isaac Lab environment (no action clipping, managed by environment)
+        # get the observations from the observation manager before resetting
+        last_obs_dict = self.env.unwrapped.observation_manager.compute(update_history=True)
+        # execute step in Isaac Lab environment (managed by environment)
         obs_dict, rewards, terminated, truncated, infos = self.env.step(actions)
         
         # compute dones for compatibility with HimLoco RSL-RL
@@ -295,7 +297,7 @@ class HimlocoVecEnvWrapper(VecEnv):
             current_privileged_obs = obs_dict["critic"]
             # Compute termination observations before updating buffer
             self._termination_privileged_obs = self.compute_termination_observations(
-                self._termination_ids, current_privileged_obs
+                self._termination_ids, last_obs_dict["critic"]
             )
             # Update history buffer
             if self.privileged_history_length > 0:
