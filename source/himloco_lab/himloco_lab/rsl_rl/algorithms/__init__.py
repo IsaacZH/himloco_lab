@@ -29,3 +29,4 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 from .him_ppo import HIMPPO
+from .himmix_ppo import HimmixPPO
