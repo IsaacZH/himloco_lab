@@ -45,8 +45,9 @@ from ..algorithms import *
 
 from ..utils import store_code_state
 from ..datasets.amp_utils import Normalizer
+from ..datasets.motion_loader import AMPLoader
 
-class HimmixOnPolicyRunner:
+class HIMMixOnPolicyRunner:
     """AMP On-policy runner for training and evaluation."""
 
     def __init__(self,
@@ -57,50 +58,64 @@ class HimmixOnPolicyRunner:
         self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
+        self.amp_cfg = train_cfg["amp"]
         self.device = device
         self.env = env
-        obs, extras = self.env.get_observations()
-        num_obs = obs.shape[1]
-        if "critic" in extras["observations"]:
-            num_critic_obs = extras["observations"]["critic"].shape[1]
+                
+        # Determine observation dimensions
+        if self.env.num_privileged_obs is not None:
+            num_critic_obs = self.env.num_privileged_obs 
         else:
-            num_critic_obs = num_obs
-        actor_critic_class = eval(self.policy_cfg.pop("class_name"))  # ActorCritic
-        # TODO: move setting to agent config
-        actor_critic: HIMActorCritic = actor_critic_class( self.env.num_obs,
-                                                        num_critic_obs,
-                                                        self.env.unwrapped.num_one_step_observations,
-                                                        self.env.num_actions,
-                                                        **self.policy_cfg).to(self.device)
-        self.alg_cfg["amp_replay_buffer_size"] = self.env.unwrapped.cfg.amp_replay_buffer_size
-
-        amp_data = self.env.unwrapped.amp_loader
-        
-        amp_normalizer = Normalizer(amp_data.observation_dim)
-        discriminator = AMPDiscriminator(
-            amp_data.observation_dim * 2,
-            self.cfg["amp_reward_coef"],
-            self.cfg["amp_discr_hidden_dims"],
-            device,
-            self.cfg["amp_task_reward_lerp"],
+            num_critic_obs = self.env.num_obs
+        self.num_actor_obs = self.env.num_obs
+        self.num_critic_obs = num_critic_obs
+            
+        # Initialize policy network
+        actor_critic_class = eval(train_cfg["policy_class_name"])  # HIMActorCritic
+        actor_critic: HIMActorCritic = actor_critic_class(
+            self.env.num_obs,  # historical obs
+            num_critic_obs,  # historical privileged obs
+            self.env.num_one_step_obs,
+            self.env.num_actions,
+            **self.policy_cfg
         ).to(self.device)
         
-        min_std = torch.tensor(self.cfg["min_normalized_std"], device=self.device) * (
+        # TODO: move setting to agent config
+        # print(self.amp_cfg["amp_motion_files"])
+        self.amp_data = AMPLoader(
+            device=self.device,
+            num_preload_transitions=self.amp_cfg["amp_num_preload_transitions"],
+            motion_files=self.amp_cfg["amp_motion_files"],
+            time_between_frames=self.env.unwrapped.cfg.sim.dt * self.env.unwrapped.cfg.sim.render_interval,
+        )
+            
+        amp_normalizer = Normalizer(self.amp_data.observation_dim)
+        discriminator = AMPDiscriminator(
+            self.amp_data.observation_dim * 2,
+            self.amp_cfg["amp_reward_coef"],
+            self.amp_cfg["amp_discr_hidden_dims"],
+            device,
+            self.amp_cfg["amp_task_reward_lerp"],
+        ).to(self.device)
+        
+        robot = self.env.unwrapped.scene.articulations["robot"]
+        min_std = torch.tensor(self.amp_cfg["min_normalized_std"], device=self.device) * (
             torch.abs(
-                self.env.unwrapped.robot.data.soft_joint_pos_limits[0, :, 1]
-                - self.env.unwrapped.robot.data.soft_joint_pos_limits[0, :, 0]
+                robot.data.soft_joint_pos_limits[0, :, 1]
+                - robot.data.soft_joint_pos_limits[0, :, 0]
             )
         )
         
-        alg_class = eval(self.alg_cfg.pop("class_name"))  # PPO
-        self.alg: HimmixPPO = alg_class(
-            actor_critic, discriminator, amp_data, amp_normalizer, min_std, device=self.device, **self.alg_cfg
+        alg_class = eval(train_cfg["algorithm_class_name"])  # HIMMixPPO
+        print(f"[INFO] Using algorithm class: {alg_class}")
+        self.alg: HIMMixPPO = alg_class(
+            actor_critic, discriminator, self.amp_data, amp_normalizer, min_std, device=self.device, **self.alg_cfg
         )
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
         self.empirical_normalization = self.cfg["empirical_normalization"]
         if self.empirical_normalization:
-            self.obs_normalizer = EmpiricalNormalization(shape=[num_obs], until=1.0e8).to(self.device)
+            self.obs_normalizer = EmpiricalNormalization(shape=[self.env.num_obs], until=1.0e8).to(self.device)
             self.critic_obs_normalizer = EmpiricalNormalization(shape=[num_critic_obs], until=1.0e8).to(self.device)
         else:
             self.obs_normalizer = torch.nn.Identity()  # no normalization
@@ -109,9 +124,9 @@ class HimmixOnPolicyRunner:
         self.alg.init_storage(
             self.env.num_envs,
             self.num_steps_per_env,
-            [num_obs],
-            [num_critic_obs],
-            [self.env.unwrapped.num_actions],
+            [self.env.num_obs],
+            [self.env.num_privileged_obs],
+            [self.env.num_actions],
         )
 
         # Log
@@ -150,10 +165,12 @@ class HimmixOnPolicyRunner:
             self.env.episode_length_buf = torch.randint_like(
                 self.env.episode_length_buf, high=int(self.env.max_episode_length)
             )
-        obs, extras = self.env.get_observations()
-        critic_obs = extras["observations"].get("critic", obs)
+        obs = self.env.get_observations()
+        privileged_obs = self.env.get_privileged_observations()
+        critic_obs = privileged_obs if privileged_obs is not None else obs
         obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
-        amp_obs = self.env.unwrapped.get_amp_observations()
+        
+        amp_obs = self.env.get_amp_observations()
         amp_obs = amp_obs.to(self.device)
 
         self.train_mode()  # switch to train mode (for dropout for example)
@@ -172,33 +189,30 @@ class HimmixOnPolicyRunner:
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
                     actions = self.alg.act(obs, critic_obs, amp_obs)
-                    obs, rewards, dones, infos = self.env.step(actions)
-                    reset_env_ids = infos["reset_env_ids"]
-                    terminal_amp_states = infos["terminal_amp_states"]
+                    obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs = self.env.step(actions)
+                    
                     obs = self.obs_normalizer(obs)
-                    critic_obs = infos['observations']['critic'] if infos['observations']['critic'] is not None else obs
-                    obs, critic_obs, rewards, dones = (
-                        obs.to(self.device),
-                        critic_obs.to(self.device),
-                        rewards.to(self.device),
-                        dones.to(self.device),
-                    )
-                    next_amp_obs = self.env.unwrapped.get_amp_observations()
+                    critic_obs = privileged_obs if privileged_obs is not None else obs
+                    obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    termination_ids = termination_ids.to(self.device)
+                    termination_privileged_obs = termination_privileged_obs.to(self.device)
+                    
+                    next_critic_obs = critic_obs.clone().detach()
+                    next_critic_obs[termination_ids] = termination_privileged_obs.clone().detach()
+
+                    next_amp_obs = self.env.get_amp_observations()
                     next_amp_obs = next_amp_obs.to(self.device)
                     # Account for terminal states.
                     next_amp_obs_with_term = torch.clone(next_amp_obs)
-                    if reset_env_ids.numel() > 0:
-                        next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
+                    # terminal_amp_states = infos["terminal_amp_states"] # TODO: we have not use this yet, add later
+                    # if termination_ids.numel() > 0:
+                    #     next_amp_obs_with_term[termination_ids] = terminal_amp_states
                     
                     rewards = self.alg.discriminator.predict_amp_reward(
                         amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer
                     )[0]
                     amp_obs = torch.clone(next_amp_obs)
-                    next_critic_obs = critic_obs.clone().detach()
-                    if infos['terminal_states'] is not None:
-                        termination_privileged_obs = infos['terminal_states']
-                        termination_privileged_obs = termination_privileged_obs.to(self.device)                    
-                        next_critic_obs[reset_env_ids] = termination_privileged_obs.clone().detach()
+
                     self.alg.process_env_step(rewards, dones, infos,next_critic_obs, next_amp_obs_with_term)
                     if self.log_dir is not None:
                         # Book keeping
@@ -236,20 +250,27 @@ class HimmixOnPolicyRunner:
             stop = time.time()
             learn_time = stop - start
             self.current_learning_iteration = it
+            # log info
             if self.log_dir is not None:
                 self.log(locals())
-            if it % self.save_interval == 0:
-                self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                # Save model
+                if it % self.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, 'model_{}.pt'.format(it)))
+            # Clear episode infos
             ep_infos.clear()
-            if it == start_iter:
-                # obtain all the diff files
-                git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
-                # if possible store them to wandb
-                if self.logger_type in ["wandb", "neptune"] and git_file_paths:
-                    for path in git_file_paths:
-                        self.writer.save_file(path)
+            
+            # if it == start_iter:
+            #     # obtain all the diff files
+            #     git_file_paths = store_code_state(self.log_dir, self.git_status_repos)
+            #     # if possible store them to wandb
+            #     if self.logger_type in ["wandb", "neptune"] and git_file_paths:
+            #         for path in git_file_paths:
+            #             self.writer.save_file(path)
+                        
+        # Save the final model after training
+        if self.log_dir is not None:
+            self.save(os.path.join(self.log_dir, 'model_{}.pt'.format(self.current_learning_iteration)))
 
-        self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration + 1}.pt"))
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
         self.tot_timesteps += self.num_steps_per_env * self.env.num_envs

@@ -6,5 +6,4 @@
 """Wrappers for adapting Isaac Lab environments to HimLoco RSL-RL."""
 
 from .himloco_vec_env_wrapper import HimlocoVecEnvWrapper
-
-__all__ = ["HimlocoVecEnvWrapper"]
+from .himmix_vec_env_wrapper import HimmixVecEnvWrapper

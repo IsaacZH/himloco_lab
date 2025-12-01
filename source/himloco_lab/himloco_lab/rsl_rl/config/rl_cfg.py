@@ -153,7 +153,33 @@ class HIMPPPOAlgorithmCfg:
 
     desired_kl: float = 0.01
     """The desired KL divergence for adaptive learning rate. Default is 0.01."""
-
+    
+@configclass
+class AmpCfg:
+    """Configuration for AMP settings."""
+    
+    amp_motion_files: list[str] = MISSING
+    """List of file paths to AMP motion data files."""
+    
+    amp_num_preload_transitions: int = 2000000
+    """Number of AMP transitions to preload into memory. Default is 2000000."""
+    
+    amp_replay_buffer_size: int = 1000000
+    """Size of the AMP replay buffer. Default is 1000000."""
+    
+    amp_reward_coef: float = 0.5
+    """Coefficient for the AMP reward. Default is 0.5."""
+    
+    amp_task_reward_lerp: float = 0.8
+    """Coefficient for interpolating the task reward in AMP. Default is 0.8."""
+    
+    amp_discr_hidden_dims: list[int] = [1024, 512]
+    """Hidden dimensions for the AMP discriminator network. Default is [1024, 512]."""
+    
+    min_normalized_std: list[float] = [0.01, 0.01, 0.01] * 4
+    """Minimum normalized standard deviation for AMP observations. Default is [0.01, 0.01, 0.01] * 4."""
+    
+    
 @configclass
 class HIMOnPolicyRunnerCfg(HIMBaseRunnerCfg):
     """Configuration of the runner for on-policy algorithms."""
@@ -178,3 +204,16 @@ class HIMOnPolicyRunnerCfg(HIMBaseRunnerCfg):
     
     privileged_history_length: int = 0
     """Number of historical time steps to stack with current privileged observation. Default is 0."""
+
+@configclass
+class HIMMixOnPolicyRunnerCfg(HIMOnPolicyRunnerCfg):
+    """Configuration of the runner for HIMMix on-policy algorithms."""
+
+    class_name: str = "HIMMixOnPolicyRunner"
+    """The runner class name. Default is HIMMixOnPolicyRunner."""
+
+    algorithm_class_name: str = "HIMMixPPO"
+    """The algorithm class name. Default is HIMMixPPO."""
+
+    amp: AmpCfg = MISSING
+    """The AMP configuration."""

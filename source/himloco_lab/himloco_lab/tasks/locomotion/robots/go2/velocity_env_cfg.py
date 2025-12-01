@@ -86,7 +86,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
     # ground terrain
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="generator",  # "plane", "generator"
+        terrain_type="plane",  # "plane", "generator"
         terrain_generator=COBBLESTONE_ROAD_CFG,  # None, COBBLESTONE_ROAD_CFG
         max_init_terrain_level=5,
         collision_group=-1,
@@ -298,6 +298,18 @@ class ObservationsCfg:
     # privileged observations
     critic: CriticCfg = CriticCfg()
 
+    @configclass
+    class AmpCfg(ObsGroup):
+        base_pos_z = ObsTerm(func=mdp.base_pos_z)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        joint_pos = ObsTerm(func=mdp.joint_pos)
+        joint_vel = ObsTerm(func=mdp.joint_vel)
+        
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+    AMP: AmpCfg = AmpCfg()
 
 @configclass
 class RewardsCfg:
@@ -462,7 +474,7 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
     lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
 
 
@@ -471,7 +483,7 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the locomotion velocity-tracking environment."""
 
     # Scene settings
-    scene: RobotSceneCfg = RobotSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: RobotSceneCfg = RobotSceneCfg(num_envs=2, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -517,6 +529,18 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
+                
+        #amp settings
+        self.urdf_path = "/home/isaac/unitree_ros/robots/go2_description/urdf/go2_description.urdf"
+        self.ee_names = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
+        
+        # self.base_name = "base" #unnnessary?
+        
+        #TODO: move setting to agent config
+        # self.reference_state_initialization = True
+        # self.amp_motion_files = glob.glob(f"datasets/mocap_motions_go2/*")
+        # self.amp_num_preload_transitions = 2000000
+        # self.amp_replay_buffer_size = 1000000
 
 
 @configclass

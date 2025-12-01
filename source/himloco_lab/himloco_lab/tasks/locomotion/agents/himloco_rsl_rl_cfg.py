@@ -4,12 +4,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.utils import configclass
+import glob
 
-from himloco_lab.rsl_rl.config import HIMOnPolicyRunnerCfg, HIMPPPOAlgorithmCfg, HIMPPOActorCriticCfg
+from himloco_lab.rsl_rl.config import HIMMixOnPolicyRunnerCfg, HIMPPPOAlgorithmCfg, HIMPPOActorCriticCfg, AmpCfg
 
 @configclass
-class PPORunnerCfg(HIMOnPolicyRunnerCfg):
-    num_steps_per_env = 100
+class PPORunnerCfg(HIMMixOnPolicyRunnerCfg):
+    num_steps_per_env = 24
     max_iterations = 15000
     save_interval = 100
     experiment_name = "go2_rough"
@@ -35,4 +36,6 @@ class PPORunnerCfg(HIMOnPolicyRunnerCfg):
         desired_kl = 0.01,
         max_grad_norm = 1.0,
     )
-    
+    amp = AmpCfg(
+        amp_motion_files = glob.glob(f"/home/isaac/himloco_lab/source/himloco_lab/himloco_lab/datasets/mocap_motions_go2/*"),
+    )

@@ -29,3 +29,4 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 from .him_on_policy_runner import HIMOnPolicyRunner
+from .himmix_on_policy_runner import HIMMixOnPolicyRunner

@@ -36,7 +36,7 @@ from ..modules import HIMActorCritic
 from ..storage import HIMRolloutStorage,RolloutStorage
 from ..storage.replay_buffer import ReplayBuffer
 from ..modules.amp_discriminator import AMPDiscriminator
-class HimmixPPO:
+class HIMMixPPO:
     actor_critic: HIMActorCritic
 
     def __init__(
