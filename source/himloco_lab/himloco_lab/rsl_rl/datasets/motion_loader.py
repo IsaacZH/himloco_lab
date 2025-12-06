@@ -329,30 +329,30 @@ class AMPLoader:
         """Generates a batch of AMP transitions."""
         for _ in range(num_mini_batch):
             if self.preload_transitions:
-                idxs = np.random.choice(self.preloaded_s.shape[0], size=mini_batch_size)
-                s = self.preloaded_s[idxs, AMPLoader.JOINT_POSE_START_IDX : AMPLoader.JOINT_VEL_END_IDX]
-                s = torch.cat(
-                    [s, self.preloaded_s[idxs, AMPLoader.ROOT_POS_START_IDX + 2 : AMPLoader.ROOT_POS_START_IDX + 3]],
-                    dim=-1,
-                )
-                s_next = self.preloaded_s_next[idxs, AMPLoader.JOINT_POSE_START_IDX : AMPLoader.JOINT_VEL_END_IDX]
-                s_next = torch.cat(
-                    [
-                        s_next,
-                        self.preloaded_s_next[
-                            idxs, AMPLoader.ROOT_POS_START_IDX + 2 : AMPLoader.ROOT_POS_START_IDX + 3
-                        ],
-                    ],
-                    dim=-1,
-                )
+                idxs = np.random.choice(
+                    self.preloaded_s.shape[0], size=mini_batch_size)
+                s = torch.cat([
+                    self.preloaded_s[idxs, AMPLoader.JOINT_POSE_START_IDX:AMPLoader.JOINT_POSE_END_IDX],
+                    # self.preloaded_s[idxs, AMPLoader.LINEAR_VEL_START_IDX:AMPLoader.JOINT_VEL_END_IDX],
+                    self.preloaded_s[idxs, AMPLoader.ANGULAR_VEL_START_IDX:AMPLoader.JOINT_VEL_END_IDX],
+                    self.preloaded_s[idxs, AMPLoader.ROOT_POS_START_IDX + 2:AMPLoader.ROOT_POS_START_IDX + 3]
+                ], dim=-1)
+                s_next = torch.cat([
+                    self.preloaded_s_next[idxs, AMPLoader.JOINT_POSE_START_IDX:AMPLoader.JOINT_POSE_END_IDX],
+                    # self.preloaded_s_next[idxs, AMPLoader.LINEAR_VEL_START_IDX:AMPLoader.JOINT_VEL_END_IDX],
+                    self.preloaded_s_next[idxs, AMPLoader.ANGULAR_VEL_START_IDX:AMPLoader.JOINT_VEL_END_IDX],
+                    self.preloaded_s_next[idxs, AMPLoader.ROOT_POS_START_IDX + 2:AMPLoader.ROOT_POS_START_IDX + 3]
+                ], dim=-1)
             else:
                 s, s_next = [], []
                 traj_idxs = self.weighted_traj_idx_sample_batch(mini_batch_size)
                 times = self.traj_time_sample_batch(traj_idxs)
                 for traj_idx, frame_time in zip(traj_idxs, times):
                     s.append(self.get_frame_at_time(traj_idx, frame_time))
-                    s_next.append(self.get_frame_at_time(traj_idx, frame_time + self.time_between_frames))
-
+                    s_next.append(
+                        self.get_frame_at_time(
+                            traj_idx, frame_time + self.time_between_frames))
+                
                 s = torch.vstack(s)
                 s_next = torch.vstack(s_next)
             yield s, s_next
@@ -360,7 +360,10 @@ class AMPLoader:
     @property
     def observation_dim(self):
         """Size of AMP observations."""
-        return self.trajectories[0].shape[1] + 1
+        # return self.trajectories[0].shape[1] + 1 - 12
+        # return self.trajectories[0].shape[1] - 12
+        # return self.trajectories[0].shape[1] - 12 - 3
+        return self.trajectories[0].shape[1] + 1 - 12 - 3
 
     @property
     def num_motions(self):

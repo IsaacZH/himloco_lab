@@ -252,16 +252,16 @@ class HimmixVecEnvWrapper(VecEnv):
         joint_vel = group_obs["joint_vel"]
         joint_pos = self.reorder_from_isaacsim_to_isaacgym_tool(joint_pos)
         joint_vel = self.reorder_from_isaacsim_to_isaacgym_tool(joint_vel)
-        foot_pos = []
-        with torch.no_grad():
-            for i, chain_ee in enumerate(self.chain_ee):
-                foot_pos.append(chain_ee.forward_kinematics(joint_pos[:, i * 3 : i * 3 + 3]).get_matrix()[:, :3, 3])
-        foot_pos = torch.cat(foot_pos, dim=-1)
+        # foot_pos = []
+        # with torch.no_grad():
+        #     for i, chain_ee in enumerate(self.chain_ee):
+        #         foot_pos.append(chain_ee.forward_kinematics(joint_pos[:, i * 3 : i * 3 + 3]).get_matrix()[:, :3, 3])
+        # foot_pos = torch.cat(foot_pos, dim=-1)
         base_lin_vel = group_obs["base_lin_vel"]
         base_ang_vel = group_obs["base_ang_vel"]
         z_pos = group_obs["base_pos_z"]
         # joint_pos(0-11) foot_pos(12-23) base_lin_vel(24-26) base_ang_vel(27-29) joint_vel(30-41) z_pos(42)
-        return torch.cat((joint_pos, foot_pos, base_lin_vel, base_ang_vel, joint_vel, z_pos), dim=-1)
+        return torch.cat((joint_pos, base_ang_vel, joint_vel, z_pos), dim=-1)
     
     def reorder_from_isaacsim_to_isaacgym_tool(self, joint_tensor):
         # Convert to a 3x4 tensor

@@ -8,9 +8,14 @@ import glob
 
 from himloco_lab.rsl_rl.config import HIMMixOnPolicyRunnerCfg, HIMPPPOAlgorithmCfg, HIMPPOActorCriticCfg, AmpCfg
 
+MOTION_FILES = []
+MOTION_FILES.extend(glob.glob(f"/home/isaac/himloco_lab/source/himloco_lab/himloco_lab/datasets/mocap_motions_go2/left*.txt"))
+MOTION_FILES.extend(glob.glob(f"/home/isaac/himloco_lab/source/himloco_lab/himloco_lab/datasets/mocap_motions_go2/right*.txt"))
+MOTION_FILES.extend(glob.glob(f"/home/isaac/himloco_lab/source/himloco_lab/himloco_lab/datasets/mocap_motions_go2/trot*.txt"))
+
 @configclass
 class PPORunnerCfg(HIMMixOnPolicyRunnerCfg):
-    num_steps_per_env = 24
+    num_steps_per_env = 100
     max_iterations = 15000
     save_interval = 100
     experiment_name = "go2_rough"
@@ -37,5 +42,7 @@ class PPORunnerCfg(HIMMixOnPolicyRunnerCfg):
         max_grad_norm = 1.0,
     )
     amp = AmpCfg(
-        amp_motion_files = glob.glob(f"/home/isaac/himloco_lab/source/himloco_lab/himloco_lab/datasets/mocap_motions_go2/*"),
+        amp_motion_files = MOTION_FILES,
+        amp_reward_coef = 0.02,
+        amp_task_reward_lerp=0.5,
     )

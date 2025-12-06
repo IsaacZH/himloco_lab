@@ -208,9 +208,9 @@ class HIMMixOnPolicyRunner:
                     # if termination_ids.numel() > 0:
                     #     next_amp_obs_with_term[termination_ids] = terminal_amp_states
                     
-                    rewards = self.alg.discriminator.predict_amp_reward(
-                        amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer
-                    )[0]
+                    # rewards = self.alg.discriminator.predict_amp_reward(
+                    #     amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer
+                    # )[0]
                     amp_obs = torch.clone(next_amp_obs)
 
                     self.alg.process_env_step(rewards, dones, infos,next_critic_obs, next_amp_obs_with_term)
@@ -399,7 +399,9 @@ class HIMMixOnPolicyRunner:
 
     def load(self, path, load_optimizer=True):
         # 加载模型和优化器的状态字典
-        loaded_dict = torch.load(path)
+        # 注意: weights_only=False 允许加载自定义类（如Normalizer）
+        # 只在信任checkpoint来源时使用
+        loaded_dict = torch.load(path, weights_only=False)
         
         # 加载策略网络（actor_critic）的模型状态字典
         self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])

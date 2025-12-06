@@ -31,3 +31,13 @@ gym.register(
         "himloco_rsl_rl_cfg": f"himloco_lab.tasks.locomotion.agents.himloco_rsl_rl_cfg:PPORunnerCfg",
     },
 )
+
+gym.register(
+    id="Unitree-Go2-HimMix-Play",
+    entry_point="himloco_lab.envs:HimlocoManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.velocity_env_cfg:RobotPlayEnvCfg",
+        "himloco_rsl_rl_cfg": f"himloco_lab.tasks.locomotion.agents.himloco_rsl_rl_cfg:PPORunnerCfg",
+    },
+)
