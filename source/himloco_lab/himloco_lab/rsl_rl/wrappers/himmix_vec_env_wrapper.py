@@ -120,14 +120,6 @@ class HimmixVecEnvWrapper(VecEnv):
             self.privileged_obs_history_buf = None
             self._termination_privileged_obs = None
         
-        # amp
-        self.chain_ee = []
-        for ee_name in self.unwrapped.cfg.ee_names:
-            with open(self.unwrapped.cfg.urdf_path, "rb") as urdf_file:
-                urdf_content = urdf_file.read()
-                chain_ee_instance = urdf.build_serial_chain_from_urdf(urdf_content, ee_name).to(device=self.device)
-                self.chain_ee.append(chain_ee_instance)
-        
         # reset at the start since the HimLoco runner does not call reset
         self.env.reset()
 
@@ -252,16 +244,9 @@ class HimmixVecEnvWrapper(VecEnv):
         joint_vel = group_obs["joint_vel"]
         joint_pos = self.reorder_from_isaacsim_to_isaacgym_tool(joint_pos)
         joint_vel = self.reorder_from_isaacsim_to_isaacgym_tool(joint_vel)
-        # foot_pos = []
-        # with torch.no_grad():
-        #     for i, chain_ee in enumerate(self.chain_ee):
-        #         foot_pos.append(chain_ee.forward_kinematics(joint_pos[:, i * 3 : i * 3 + 3]).get_matrix()[:, :3, 3])
-        # foot_pos = torch.cat(foot_pos, dim=-1)
-        base_lin_vel = group_obs["base_lin_vel"]
         base_ang_vel = group_obs["base_ang_vel"]
-        z_pos = group_obs["base_pos_z"]
-        # joint_pos(0-11) foot_pos(12-23) base_lin_vel(24-26) base_ang_vel(27-29) joint_vel(30-41) z_pos(42)
-        return torch.cat((joint_pos, base_ang_vel, joint_vel, z_pos), dim=-1)
+        # z_pos = group_obs["base_pos_z"]
+        return torch.cat((joint_pos, base_ang_vel, joint_vel), dim=-1)
     
     def reorder_from_isaacsim_to_isaacgym_tool(self, joint_tensor):
         # Convert to a 3x4 tensor
@@ -348,6 +333,11 @@ class HimmixVecEnvWrapper(VecEnv):
             else:
                 self.privileged_obs_history_buf = current_privileged_obs
         
+        if "AMP" in obs_dict:
+            self._termination_amp_obs = self.get_amp_observations()[self._termination_ids]
+        else:
+            self._termination_amp_obs = None
+            
         # Check for NaN/Inf in observations before returning
         if torch.isnan(self.obs_history_buf).any() or torch.isinf(self.obs_history_buf).any():
             raise ValueError("NaN/Inf detected in obs_history_buf!")
@@ -362,6 +352,7 @@ class HimmixVecEnvWrapper(VecEnv):
             infos,
             self._termination_ids,
             self._termination_privileged_obs,
+            self._termination_amp_obs,
         )
 
     def close(self):

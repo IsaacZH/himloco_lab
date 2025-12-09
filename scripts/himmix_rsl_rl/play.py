@@ -185,7 +185,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: HIMMixOnPolicyRunnerCfg):
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs = env.step(actions)
+            obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs, _ = env.step(actions)
         
         if args_cli.video:
             timestep += 1

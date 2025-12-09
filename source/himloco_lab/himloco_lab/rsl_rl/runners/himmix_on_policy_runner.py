@@ -189,7 +189,7 @@ class HIMMixOnPolicyRunner:
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
                     actions = self.alg.act(obs, critic_obs, amp_obs)
-                    obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs = self.env.step(actions)
+                    obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs, termination_amp_obs = self.env.step(actions)
                     
                     obs = self.obs_normalizer(obs)
                     critic_obs = privileged_obs if privileged_obs is not None else obs
@@ -204,13 +204,12 @@ class HIMMixOnPolicyRunner:
                     next_amp_obs = next_amp_obs.to(self.device)
                     # Account for terminal states.
                     next_amp_obs_with_term = torch.clone(next_amp_obs)
-                    # terminal_amp_states = infos["terminal_amp_states"] # TODO: we have not use this yet, add later
-                    # if termination_ids.numel() > 0:
-                    #     next_amp_obs_with_term[termination_ids] = terminal_amp_states
+                    termination_amp_obs = termination_amp_obs.to(self.device)
+                    next_amp_obs_with_term[termination_ids] = termination_amp_obs.clone().detach()
                     
-                    # rewards = self.alg.discriminator.predict_amp_reward(
-                    #     amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer
-                    # )[0]
+                    rewards = self.alg.discriminator.predict_amp_reward(
+                        amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer
+                    )[0]
                     amp_obs = torch.clone(next_amp_obs)
 
                     self.alg.process_env_step(rewards, dones, infos,next_critic_obs, next_amp_obs_with_term)

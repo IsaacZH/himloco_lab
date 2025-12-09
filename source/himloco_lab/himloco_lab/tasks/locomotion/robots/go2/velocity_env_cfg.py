@@ -161,14 +161,14 @@ class EventCfg:
         },
     )
     
-    randomize_rigid_body_com = EventTerm(
-        func=mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
-        },
-    )
+    # randomize_rigid_body_com = EventTerm(
+    #     func=mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+    #         "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+    #     },
+    # )
 
     # reset
 
@@ -198,17 +198,17 @@ class EventCfg:
     )
 
     # interval
-    external_force = EventTerm(
-        func=mdp.apply_periodic_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.02, 0.02),
-        params={
-            "period_step": 8,
-            "force_range": (-30.0, 30.0),
-            "torque_range": (-0.0, 0.0),
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-        },
-    )
+    # external_force = EventTerm(
+    #     func=mdp.apply_periodic_external_force_torque,
+    #     mode="interval",
+    #     interval_range_s=(0.02, 0.02),
+    #     params={
+    #         "period_step": 8,
+    #         "force_range": (-30.0, 30.0),
+    #         "torque_range": (-0.0, 0.0),
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+    #     },
+    # )
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
@@ -300,7 +300,10 @@ class ObservationsCfg:
 
     @configclass
     class AmpCfg(ObsGroup):
-        base_pos_z = ObsTerm(func=mdp.base_pos_z)
+        base_pos_z = ObsTerm(func=mdp.base_height_scan,
+            params={"sensor_cfg": SceneEntityCfg("base_height_scanner"),
+                    "asset_cfg": SceneEntityCfg("robot")}
+        )
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
         joint_pos = ObsTerm(func=mdp.joint_pos)
@@ -364,23 +367,23 @@ class RewardsCfg:
     # joint_torques = RewTerm(func=mdp.joint_torques_l2, weight=-2e-4)
     # joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     
-    # head_undesired_contacts = RewTerm(
-    #     func=mdp.undesired_contacts,
-    #     weight=-1,
-    #     params={
-    #         "threshold": 0.3,
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Head_.*"]),
-    #     },
-    # )
+    head_undesired_contacts = RewTerm(
+        func=mdp.undesired_contacts,
+        weight=-1,
+        params={
+            "threshold": 0.3,
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Head_.*"]),
+        },
+    )
     
-    # other_undesired_contacts = RewTerm(
-    #     func=mdp.undesired_contacts,
-    #     weight=-0.01,
-    #     params={
-    #         "threshold": 0.3,
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_hip", ".*_thigh", ".*_calf"]),
-    #     },
-    # )
+    other_undesired_contacts = RewTerm(
+        func=mdp.undesired_contacts,
+        weight=-0.01,
+        params={
+            "threshold": 0.3,
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_hip", ".*_thigh", ".*_calf"]),
+        },
+    )
 
     # is_terminated = RewTerm(func=mdp.is_terminated, weight=-5.0)
     # joint_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
@@ -397,13 +400,13 @@ class RewardsCfg:
     #     },
     # )
     
-    # feet_stumble = RewTerm(
-    #     func=mdp.feet_stumble,
-    #     weight=-0.01,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-    #     },
-    # )
+    feet_stumble = RewTerm(
+        func=mdp.feet_stumble,
+        weight=-1,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+        },
+    )
 
     # joint_pos = RewTerm(
     #     func=mdp.joint_position_penalty,
@@ -529,19 +532,6 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
-                
-        #amp settings
-        self.urdf_path = "/home/isaac/unitree_ros/robots/go2_description/urdf/go2_description.urdf"
-        self.ee_names = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
-        
-        # self.base_name = "base" #unnnessary?
-        
-        #TODO: move setting to agent config
-        # self.reference_state_initialization = True
-        # self.amp_motion_files = glob.glob(f"datasets/mocap_motions_go2/*")
-        # self.amp_num_preload_transitions = 2000000
-        # self.amp_replay_buffer_size = 1000000
-
 
 @configclass
 class RobotPlayEnvCfg(RobotEnvCfg):
