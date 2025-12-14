@@ -236,17 +236,16 @@ class HimmixVecEnvWrapper(VecEnv):
         return termination_obs
     
     def get_amp_observations(self):
-        self.unwrapped.observation_manager._group_obs_concatenate["AMP"] = False
+        # self.unwrapped.observation_manager._group_obs_concatenate["AMP"] = False
         group_obs = self.unwrapped.observation_manager.compute_group("AMP")
-        self.unwrapped.observation_manager._group_obs_concatenate["AMP"] = True
+        return group_obs
+        # self.unwrapped.observation_manager._group_obs_concatenate["AMP"] = True
         # Isaac Sim uses breadth-first joint ordering, while Isaac Gym uses depth-first joint ordering
         joint_pos = group_obs["joint_pos"]
         joint_vel = group_obs["joint_vel"]
-        joint_pos = self.reorder_from_isaacsim_to_isaacgym_tool(joint_pos)
-        joint_vel = self.reorder_from_isaacsim_to_isaacgym_tool(joint_vel)
         base_ang_vel = group_obs["base_ang_vel"]
-        # z_pos = group_obs["base_pos_z"]
-        return torch.cat((joint_pos, base_ang_vel, joint_vel), dim=-1)
+        z_pos = group_obs["base_pos_z"]
+        return torch.cat((joint_pos, base_ang_vel, joint_vel, z_pos), dim=-1)
     
     def reorder_from_isaacsim_to_isaacgym_tool(self, joint_tensor):
         # Convert to a 3x4 tensor

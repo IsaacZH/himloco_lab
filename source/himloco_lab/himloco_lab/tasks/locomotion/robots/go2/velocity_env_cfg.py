@@ -300,18 +300,18 @@ class ObservationsCfg:
 
     @configclass
     class AmpCfg(ObsGroup):
-        base_pos_z = ObsTerm(func=mdp.base_height_scan,
-            params={"sensor_cfg": SceneEntityCfg("base_height_scanner"),
-                    "asset_cfg": SceneEntityCfg("robot")}
-        )
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        # base_pos_z = ObsTerm(func=mdp.base_height_scan,
+        #     params={"sensor_cfg": SceneEntityCfg("base_height_scanner"),
+        #             "asset_cfg": SceneEntityCfg("robot")}
+        # )
         joint_pos = ObsTerm(func=mdp.joint_pos)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        # base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         joint_vel = ObsTerm(func=mdp.joint_vel)
         
-        def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
+        # def __post_init__(self):
+        #     self.enable_corruption = True
+        #     self.concatenate_terms = True
     AMP: AmpCfg = AmpCfg()
 
 @configclass
@@ -400,13 +400,13 @@ class RewardsCfg:
     #     },
     # )
     
-    feet_stumble = RewTerm(
-        func=mdp.feet_stumble,
-        weight=-1,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-        },
-    )
+    # feet_stumble = RewTerm(
+    #     func=mdp.feet_stumble,
+    #     weight=-1,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+    #     },
+    # )
 
     # joint_pos = RewTerm(
     #     func=mdp.joint_position_penalty,

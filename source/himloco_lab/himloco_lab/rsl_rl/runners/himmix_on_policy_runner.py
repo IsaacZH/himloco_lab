@@ -86,7 +86,7 @@ class HIMMixOnPolicyRunner:
             device=self.device,
             num_preload_transitions=self.amp_cfg["amp_num_preload_transitions"],
             motion_files=self.amp_cfg["amp_motion_files"],
-            time_between_frames=self.env.unwrapped.cfg.sim.dt * self.env.unwrapped.cfg.sim.render_interval,
+            time_between_frames=self.env.unwrapped.cfg.sim.dt,
         )
             
         amp_normalizer = Normalizer(self.amp_data.observation_dim)
@@ -105,7 +105,8 @@ class HIMMixOnPolicyRunner:
                 - robot.data.soft_joint_pos_limits[0, :, 0]
             )
         )
-        
+        print("[INFO] Using min std:", min_std)
+
         alg_class = eval(train_cfg["algorithm_class_name"])  # HIMMixPPO
         print(f"[INFO] Using algorithm class: {alg_class}")
         self.alg: HIMMixPPO = alg_class(
@@ -191,7 +192,6 @@ class HIMMixOnPolicyRunner:
                     actions = self.alg.act(obs, critic_obs, amp_obs)
                     obs, privileged_obs, rewards, dones, infos, termination_ids, termination_privileged_obs, termination_amp_obs = self.env.step(actions)
                     
-                    obs = self.obs_normalizer(obs)
                     critic_obs = privileged_obs if privileged_obs is not None else obs
                     obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
                     termination_ids = termination_ids.to(self.device)

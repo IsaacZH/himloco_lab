@@ -487,8 +487,8 @@ def main():
                 joint_vel = frame[AMPLoader.JOINT_VEL_START_IDX:AMPLoader.JOINT_VEL_END_IDX].unsqueeze(0)
                 
                 # Reorder joints from Isaac Gym (AMP data) to Isaac Sim format
-                joint_pos = reorder_from_isaacgym_to_isaacsim(joint_pos)
-                joint_vel = reorder_from_isaacgym_to_isaacsim(joint_vel)
+                # joint_pos = reorder_from_isaacgym_to_isaacsim(joint_pos)
+                # joint_vel = reorder_from_isaacgym_to_isaacsim(joint_vel)
                 
                 # Construct root state: [pos(3), rot(4), lin_vel(3), ang_vel(3)]
                 # Use fixed rotation or AMP rotation based on FIX_BASE_ROTATION setting

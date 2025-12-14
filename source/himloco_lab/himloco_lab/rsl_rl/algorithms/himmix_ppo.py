@@ -113,8 +113,6 @@ class HIMMixPPO:
         self.actor_critic.train()
 
     def act(self, obs, critic_obs, amp_obs):
-        if self.actor_critic.is_recurrent:
-            self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
         self.transition.actions = self.actor_critic.act(obs).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
@@ -159,10 +157,8 @@ class HIMMixPPO:
         mean_expert_pred = 0
         mean_estimation_loss = 0
         mean_swap_loss = 0
-        if self.actor_critic.is_recurrent:
-            generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        else:
-            generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+
+        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
 
         amp_policy_generator = self.amp_storage.feed_forward_generator(
             self.num_learning_epochs * self.num_mini_batches,
@@ -173,22 +169,9 @@ class HIMMixPPO:
             self.storage.num_envs * self.storage.num_transitions_per_env // self.num_mini_batches,
         )
 
-        for (
-            (
-            obs_batch, 
-            critic_obs_batch, 
-            actions_batch, 
-            next_critic_obs_batch, 
-            target_values_batch, 
-            advantages_batch, 
-            returns_batch, 
-            old_actions_log_prob_batch, 
-            old_mu_batch, 
-            old_sigma_batch 
-            ),
-            sample_amp_policy,
-            sample_amp_expert,
-        ) in zip(generator, amp_policy_generator, amp_expert_generator):
+        for (obs_batch, critic_obs_batch, actions_batch, next_critic_obs_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
+            old_mu_batch, old_sigma_batch), sample_amp_policy, sample_amp_expert in zip(generator, amp_policy_generator, amp_expert_generator):
+            
             self.actor_critic.act(obs_batch)
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
             value_batch = self.actor_critic.evaluate(critic_obs_batch)
@@ -197,24 +180,20 @@ class HIMMixPPO:
             entropy_batch = self.actor_critic.entropy
 
             # KL
-            if self.desired_kl is not None and self.schedule == "adaptive":
+            if self.desired_kl != None and self.schedule == 'adaptive':
                 with torch.inference_mode():
                     kl = torch.sum(
-                        torch.log(sigma_batch / old_sigma_batch + 1.0e-5)
-                        + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
-                        / (2.0 * torch.square(sigma_batch))
-                        - 0.5,
-                        axis=-1,
-                    )
+                        torch.log(sigma_batch / old_sigma_batch + 1.e-5) + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch)) / (2.0 * torch.square(sigma_batch)) - 0.5, axis=-1)
                     kl_mean = torch.mean(kl)
 
                     if kl_mean > self.desired_kl * 2.0:
                         self.learning_rate = max(1e-5, self.learning_rate / 1.5)
                     elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
                         self.learning_rate = min(1e-2, self.learning_rate * 1.5)
-
+                    
                     for param_group in self.optimizer.param_groups:
-                        param_group["lr"] = self.learning_rate
+                        param_group['lr'] = self.learning_rate
+                        
             #Estimator Update
             estimation_loss, swap_loss = self.actor_critic.estimator.update(obs_batch, next_critic_obs_batch, lr=self.learning_rate)
             # Surrogate loss
@@ -227,21 +206,11 @@ class HIMMixPPO:
 
             # Value function loss
             if self.use_clipped_value_loss:
-                value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(
-                    -self.clip_param, self.clip_param
-                )
+                value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param,
+                                                                                                self.clip_param)
                 value_losses = (value_batch - returns_batch).pow(2)
-                value_losses = torch.clamp(value_losses, -1e5, 1e5)
-                
                 value_losses_clipped = (value_clipped - returns_batch).pow(2)
-                
-                value_losses_clipped = torch.clamp(value_losses_clipped, -1e5, 1e5)
-                
                 value_loss = torch.max(value_losses, value_losses_clipped).mean()
-
-                # Print max and min of value_loss
-
-
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
@@ -260,21 +229,16 @@ class HIMMixPPO:
                     expert_next_state = self.amp_normalizer.normalize_torch(expert_next_state, self.device)
             policy_d = self.discriminator(torch.cat([policy_state, policy_next_state], dim=-1))
             expert_d = self.discriminator(torch.cat([expert_state, expert_next_state], dim=-1))
-            expert_loss = torch.nn.MSELoss()(expert_d, torch.ones(expert_d.size(), device=self.device))
-            policy_loss = torch.nn.MSELoss()(policy_d, -1 * torch.ones(policy_d.size(), device=self.device))
+            expert_loss = torch.nn.MSELoss()(
+                expert_d, torch.ones(expert_d.size(), device=self.device))
+            policy_loss = torch.nn.MSELoss()(
+                policy_d, -1 * torch.ones(policy_d.size(), device=self.device))
             amp_loss = 0.5 * (expert_loss + policy_loss)
-            grad_pen_loss = self.discriminator.compute_grad_pen(expert_state, expert_next_state, lambda_=10)
+            grad_pen_loss = self.discriminator.compute_grad_pen(
+                expert_state, expert_next_state, lambda_=10)
             
-            # Check for NaN values in losses
-
             # Compute total loss.
-            loss = (
-                surrogate_loss
-                + self.value_loss_coef * value_loss
-                - self.entropy_coef * entropy_batch.mean()
-                + amp_loss
-                + grad_pen_loss
-            )
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + amp_loss + grad_pen_loss
 
             # Gradient step
             self.optimizer.zero_grad()
@@ -289,12 +253,12 @@ class HIMMixPPO:
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
+            mean_estimation_loss += estimation_loss
+            mean_swap_loss += swap_loss
             mean_amp_loss += amp_loss.item()
             mean_grad_pen_loss += grad_pen_loss.item()
             mean_policy_pred += policy_d.mean().item()
             mean_expert_pred += expert_d.mean().item()
-            mean_estimation_loss += estimation_loss
-            mean_swap_loss += swap_loss
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates

@@ -44,5 +44,5 @@ class PPORunnerCfg(HIMMixOnPolicyRunnerCfg):
     amp = AmpCfg(
         amp_motion_files = MOTION_FILES,
         amp_reward_coef = 0.02,
-        amp_task_reward_lerp=0.5,
+        amp_task_reward_lerp=0.8,
     )
