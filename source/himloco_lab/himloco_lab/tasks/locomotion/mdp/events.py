@@ -63,9 +63,8 @@ def apply_periodic_external_force_torque(
         torques = zero_torques
     
     # set the forces and torques into the buffers
-    # note: these are only applied when you call: `asset.write_data_to_sim()`
-    asset.set_external_force_and_torque(
-        forces, torques, env_ids=env_ids, body_ids=asset_cfg.body_ids
+    asset.permanent_wrench_composer.set_forces_and_torques(
+        forces=forces, torques=torques, env_ids=env_ids, body_ids=asset_cfg.body_ids
     )
     
     # increment call count
